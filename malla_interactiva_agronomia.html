@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Malla Curricular de Agronomía</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #8e2de2;
+    }
+    .semestre {
+      margin: 20px 0;
+    }
+    .semestre h2 {
+      color: #5a189a;
+    }
+    .ramos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .ramo {
+      background: #ddd;
+      padding: 10px;
+      border-radius: 10px;
+      width: 250px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .ramo.aprobado {
+      background: #bde0fe;
+      text-decoration: line-through;
+    }
+    .ramo.habilitado {
+      background: #ffd6e0;
+    }
+    .ramo.pendiente {
+      background: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Malla Curricular de Agronomía</h1>
+  <div id="contenedor"></div>
+
+  <script>
+    const malla = JSON.parse(localStorage.getItem('mallaData')) || [
+      { semestre: "I", codigo: "AGRO085", nombre: "PRÁCTICA DE INDUCCIÓN PROFESIONAL", prerrequisitos: [] },
+      { semestre: "I", codigo: "MATM037", nombre: "ÁLGEBRA", prerrequisitos: [] },
+      { semestre: "II", codigo: "AGRO100", nombre: "PRÁCTICA DE CADENAS AGROALIMENTARIAS", prerrequisitos: ["AGRO085"] },
+      { semestre: "II", codigo: "CAEV092", nombre: "BOTÁNICA AGRÍCOLA", prerrequisitos: ["ICML035"] },
+      { semestre: "II", codigo: "ICML035", nombre: "FUNDAMENTOS DE BIOLOGÍA", prerrequisitos: [] }
+    ];
+
+    const aprobados = new Set(JSON.parse(localStorage.getItem('aprobados')) || []);
+
+    function actualizarEstados() {
+      const codigosAprobados = new Set(aprobados);
+      return malla.map(ramo => {
+        if (codigosAprobados.has(ramo.codigo)) return { ...ramo, estado: 'aprobado' };
+        if (ramo.prerrequisitos.every(req => codigosAprobados.has(req))) return { ...ramo, estado: 'habilitado' };
+        return { ...ramo, estado: 'pendiente' };
+      });
+    }
+
+    function render() {
+      const contenedor = document.getElementById("contenedor");
+      contenedor.innerHTML = "";
+
+      const porSemestre = {};
+      actualizarEstados().forEach(ramo => {
+        if (!porSemestre[ramo.semestre]) porSemestre[ramo.semestre] = [];
+        porSemestre[ramo.semestre].push(ramo);
+      });
+
+      Object.entries(porSemestre).forEach(([semestre, ramos]) => {
+        const div = document.createElement("div");
+        div.className = "semestre";
+        div.innerHTML = `<h2>Semestre ${semestre}</h2><div class="ramos"></div>`;
+        const contRamos = div.querySelector(".ramos");
+
+        ramos.forEach(ramo => {
+          const card = document.createElement("div");
+          card.className = `ramo ${ramo.estado}`;
+          card.innerText = `${ramo.nombre}`;
+          card.onclick = () => {
+            if (aprobados.has(ramo.codigo)) {
+              aprobados.delete(ramo.codigo);
+            } else {
+              aprobados.add(ramo.codigo);
+            }
+            localStorage.setItem('aprobados', JSON.stringify([...aprobados]));
+            render();
+          };
+          contRamos.appendChild(card);
+        });
+
+        contenedor.appendChild(div);
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
